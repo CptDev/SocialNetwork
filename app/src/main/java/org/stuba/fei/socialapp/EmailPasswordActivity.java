@@ -1,8 +1,10 @@
 
 package org.stuba.fei.socialapp;
 
+import android.content.Context;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
@@ -14,12 +16,19 @@ import android.widget.Toast;
 
 import com.crashlytics.android.Crashlytics;
 import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FirebaseFirestore;
 
-public class EmailPasswordActivity extends BaseActivity implements
+import java.util.Date;
+import java.util.Map;
+
+public class EmailPasswordActivity extends AppCompatActivity implements
         View.OnClickListener {
 
     private static final String TAG = "EmailPassword";
@@ -29,9 +38,10 @@ public class EmailPasswordActivity extends BaseActivity implements
     private EditText mEmailField;
     private EditText mPasswordField;
 
-    // [START declare_auth]
-    private FirebaseAuth mAuth;
-    // [END declare_auth]
+
+    private static FirebaseAuth mAuth;
+    UserPojo up = null;
+    FireStoreUtils fireStoreUtils = new FireStoreUtils();
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -50,10 +60,7 @@ public class EmailPasswordActivity extends BaseActivity implements
         findViewById(R.id.signOutButton).setOnClickListener(this);
         findViewById(R.id.verifyEmailButton).setOnClickListener(this);
 
-        // [START initialize_auth]
-        // Initialize Firebase Auth
         mAuth = FirebaseAuth.getInstance();
-        // [END initialize_auth]
 
         Button crashButton = new Button(this);
         crashButton.setText("Crash!");
@@ -68,7 +75,6 @@ public class EmailPasswordActivity extends BaseActivity implements
                 ViewGroup.LayoutParams.WRAP_CONTENT));
     }
 
-    // [START on_start_check_user]
     @Override
     public void onStart() {
         super.onStart();
@@ -76,7 +82,6 @@ public class EmailPasswordActivity extends BaseActivity implements
         FirebaseUser currentUser = mAuth.getCurrentUser();
         updateUI(currentUser);
     }
-    // [END on_start_check_user]
 
     private void createAccount(String email, String password) {
         Log.d(TAG, "createAccount:" + email);
@@ -84,9 +89,6 @@ public class EmailPasswordActivity extends BaseActivity implements
             return;
         }
 
-        showProgressDialog();
-
-        // [START create_user_with_email]
         mAuth.createUserWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
                     @Override
@@ -95,6 +97,7 @@ public class EmailPasswordActivity extends BaseActivity implements
                             // Sign in success, update UI with the signed-in user's information
                             Log.d(TAG, "createUserWithEmail:success");
                             FirebaseUser user = mAuth.getCurrentUser();
+                            fireStoreUtils.createUser(user);
                             updateUI(user);
                         } else {
                             // If sign in fails, display a message to the user.
@@ -104,12 +107,8 @@ public class EmailPasswordActivity extends BaseActivity implements
                             updateUI(null);
                         }
 
-                        // [START_EXCLUDE]
-                        hideProgressDialog();
-                        // [END_EXCLUDE]
                     }
                 });
-        // [END create_user_with_email]
     }
 
     private void signIn(String email, String password) {
@@ -118,9 +117,6 @@ public class EmailPasswordActivity extends BaseActivity implements
             return;
         }
 
-        showProgressDialog();
-
-        // [START sign_in_with_email]
         mAuth.signInWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
                     @Override
@@ -129,6 +125,16 @@ public class EmailPasswordActivity extends BaseActivity implements
                             // Sign in success, update UI with the signed-in user's information
                             Log.d(TAG, "signInWithEmail:success");
                             FirebaseUser user = mAuth.getCurrentUser();
+
+                            //-----------------------------------------
+                            //only way how to get an object from onSuccess method in firestoreutils(in case we will need it)
+                            fireStoreUtils.getUser(user,new MyCallback() {
+                                @Override
+                                public void onCallback(UserPojo userPojo) {
+                                    Log.d("TAG", userPojo.getDateOfRegistration());
+                                }
+                            });
+                            //-----------------------------------------
                             updateUI(user);
                         } else {
                             // If sign in fails, display a message to the user.
@@ -137,16 +143,11 @@ public class EmailPasswordActivity extends BaseActivity implements
                                     Toast.LENGTH_SHORT).show();
                             updateUI(null);
                         }
-
-                        // [START_EXCLUDE]
                         if (!task.isSuccessful()) {
                             mStatusTextView.setText(R.string.auth_failed);
                         }
-                        hideProgressDialog();
-                        // [END_EXCLUDE]
                     }
                 });
-        // [END sign_in_with_email]
     }
 
     private void signOut() {
@@ -158,15 +159,11 @@ public class EmailPasswordActivity extends BaseActivity implements
         // Disable button
         findViewById(R.id.verifyEmailButton).setEnabled(false);
 
-        // Send verification email
-        // [START send_email_verification]
         final FirebaseUser user = mAuth.getCurrentUser();
         user.sendEmailVerification()
                 .addOnCompleteListener(this, new OnCompleteListener<Void>() {
                     @Override
                     public void onComplete(@NonNull Task<Void> task) {
-                        // [START_EXCLUDE]
-                        // Re-enable button
                         findViewById(R.id.verifyEmailButton).setEnabled(true);
 
                         if (task.isSuccessful()) {
@@ -179,10 +176,8 @@ public class EmailPasswordActivity extends BaseActivity implements
                                     "Failed to send verification email.",
                                     Toast.LENGTH_SHORT).show();
                         }
-                        // [END_EXCLUDE]
                     }
                 });
-        // [END send_email_verification]
     }
 
     private boolean validateForm() {
@@ -208,7 +203,6 @@ public class EmailPasswordActivity extends BaseActivity implements
     }
 
     private void updateUI(FirebaseUser user) {
-        hideProgressDialog();
         if (user != null) {
             mStatusTextView.setText(getString(R.string.emailpassword_status_fmt,
                     user.getEmail(), user.isEmailVerified()));
