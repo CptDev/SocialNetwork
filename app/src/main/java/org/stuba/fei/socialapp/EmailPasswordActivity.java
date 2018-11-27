@@ -1,9 +1,13 @@
 
 package org.stuba.fei.socialapp;
 
+import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
 import android.util.Log;
@@ -43,10 +47,16 @@ public class EmailPasswordActivity extends AppCompatActivity implements
     UserPojo up = null;
     FireStoreUtils fireStoreUtils = new FireStoreUtils();
 
+    //majo
+    private static final int MAIN_REQUEST = 1111;
+    private Context context;
+    //majo doplnil
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_emailpassword);
+        context = this.getApplicationContext();
 
         // Views
         mStatusTextView = findViewById(R.id.status);
@@ -202,8 +212,15 @@ public class EmailPasswordActivity extends AppCompatActivity implements
         return valid;
     }
 
-    private void updateUI(FirebaseUser user) {
+    private void updateUI(final FirebaseUser user) {
         if (user != null) {
+            //majo doplnil
+            if(user.isEmailVerified()){
+                Intent intent = new Intent(context, MainActivity.class);
+                intent.putExtra("user_uid",user.getUid());
+                startActivityForResult(intent,MAIN_REQUEST);
+            }
+            //majo doplnil
             mStatusTextView.setText(getString(R.string.emailpassword_status_fmt,
                     user.getEmail(), user.isEmailVerified()));
             mDetailTextView.setText(getString(R.string.firebase_status_fmt, user.getUid()));
@@ -213,6 +230,9 @@ public class EmailPasswordActivity extends AppCompatActivity implements
             findViewById(R.id.signedInButtons).setVisibility(View.VISIBLE);
 
             findViewById(R.id.verifyEmailButton).setEnabled(!user.isEmailVerified());
+
+
+
         } else {
             mStatusTextView.setText(R.string.signed_out);
             mDetailTextView.setText(null);
@@ -222,6 +242,32 @@ public class EmailPasswordActivity extends AppCompatActivity implements
             findViewById(R.id.signedInButtons).setVisibility(View.GONE);
         }
     }
+
+    //majo doplnil
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == MAIN_REQUEST) {
+            if (resultCode == Activity.RESULT_OK) {
+                boolean logout = data.getBooleanExtra("logout",false);
+                if(logout){
+                    signOut();
+                }
+                else {
+                    finish();
+                }
+            }
+            if (resultCode == Activity.RESULT_CANCELED) {
+                finish();
+            }
+        }
+    }
+    //majo doplnil
+
+    //majo doplnil
+    @Override
+    public void finish(){
+        super.finish();
+    }
+    //majo doplnil
 
     @Override
     public void onClick(View v) {

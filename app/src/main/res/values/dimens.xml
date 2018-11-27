@@ -7,4 +7,12 @@
     <dimen name="icon_bottom_margin">24dp</dimen>
     <dimen name="title_bottom_margin">16dp</dimen>
     <dimen name="field_width_standard">160dp</dimen>
+
+    <dimen name="item_width">300dp</dimen>
+    <dimen name="padding_item_width">300dp</dimen>
+    <dimen name="standard_55">65dp</dimen>
+    <dimen name="standard_105">120dp</dimen>
+    <dimen name="standard_155">175dp</dimen>
+    <dimen name="standard_205">230dp</dimen>
+
 </resources>
