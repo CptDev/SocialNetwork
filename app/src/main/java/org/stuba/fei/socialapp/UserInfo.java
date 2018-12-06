@@ -72,11 +72,11 @@ public class UserInfo extends AppCompatActivity {
             switch(action)
             {
                 case MotionEvent.ACTION_DOWN:
-                    initialX = event.getX();
-                    break;
+                    initialX = event.getY();
+                    return true;
 
                 case MotionEvent.ACTION_UP:
-                    float finalX = event.getX();
+                    float finalX = event.getY();
                     if (initialX > finalX) {
                         swap = true;
                         finish();

@@ -2,6 +2,7 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:background="@drawable/bgr">
 
     <RelativeLayout
@@ -13,6 +14,16 @@
             android:scaleType="fitXY"
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
+
+        <!-- activity_player.xml-->
+        <com.google.android.exoplayer2.ui.PlayerView
+            android:id="@+id/playerView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            app:controller_layout_id="@layout/my_exo_play_pause_controlview"
+            app:resize_mode="zoom"
+            app:use_controller="true"
+            />
 
         <TextView
             android:id="@+id/textView3"

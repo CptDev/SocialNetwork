@@ -127,6 +127,7 @@ public class MainActivity extends Activity{
             }
         });
         itemTouchHelper.attachToRecyclerView(items);
+        adapter.notifyDataSetChanged();
     }
 
     @Override
@@ -225,8 +226,10 @@ public class MainActivity extends Activity{
 
                 if (direction == ItemTouchHelper.UP){
                     FABMenuClose();
+                    adapter.onViewDetachedFromWindow((ViewHolder) viewHolder);
                     userPosts(false);
                 } else if(direction == ItemTouchHelper.DOWN) {
+                    adapter.onViewDetachedFromWindow((ViewHolder) viewHolder);
                     FABMenuClose();
                     userInfo(false);
                 }
@@ -638,7 +641,18 @@ public class MainActivity extends Activity{
                 "Card 17",
                 "Card 18",
                 "Card 19",
-                "Card 20"
+                "Card 20",
+                "Card 21",
+                "Card 22",
+                "Card 23",
+                "Card 24",
+                "Card 25",
+                "Card 26",
+                "Card 27",
+                "Card 28",
+                "Card 29",
+                "Card 30",
+                "Card 31"
         };
         String[] android_image_urls = {
                 "http://api.learn2crack.com/android/images/donut.png",
@@ -660,9 +674,18 @@ public class MainActivity extends Activity{
                 "http://api.learn2crack.com/android/images/honey.png",
                 "http://api.learn2crack.com/android/images/icecream.png",
                 "http://api.learn2crack.com/android/images/donut.png",
-                "http://api.learn2crack.com/android/images/eclair.png",
-                "http://api.learn2crack.com/android/images/froyo.png",
-                "http://api.learn2crack.com/android/images/ginger.png"
+                "http://clips.vorwaerts-gmbh.de/VfE_html5.mp4",
+                "http://clips.vorwaerts-gmbh.de/VfE_html5.mp4",
+                "http://clips.vorwaerts-gmbh.de/VfE_html5.mp4",
+                "http://clips.vorwaerts-gmbh.de/VfE_html5.mp4",
+                "http://clips.vorwaerts-gmbh.de/VfE_html5.mp4",
+                "http://clips.vorwaerts-gmbh.de/VfE_html5.mp4",
+                "http://clips.vorwaerts-gmbh.de/VfE_html5.mp4",
+                "http://clips.vorwaerts-gmbh.de/VfE_html5.mp4",
+                "http://clips.vorwaerts-gmbh.de/VfE_html5.mp4",
+                "http://clips.vorwaerts-gmbh.de/VfE_html5.mp4",
+                "http://clips.vorwaerts-gmbh.de/VfE_html5.mp4",
+                "http://clips.vorwaerts-gmbh.de/VfE_html5.mp4"
         };
 
         for (int i = 0; i < cardTitle.length; i++) {
