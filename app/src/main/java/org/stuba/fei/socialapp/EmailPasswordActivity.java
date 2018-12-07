@@ -4,10 +4,8 @@ package org.stuba.fei.socialapp;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
-import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
-import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
 import android.util.Log;
@@ -20,17 +18,12 @@ import android.widget.Toast;
 
 import com.crashlytics.android.Crashlytics;
 import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.DocumentReference;
-import com.google.firebase.firestore.DocumentSnapshot;
-import com.google.firebase.firestore.FirebaseFirestore;
 
-import java.util.Date;
-import java.util.Map;
+import java.util.List;
 
 public class EmailPasswordActivity extends AppCompatActivity implements
         View.OnClickListener {
@@ -43,7 +36,7 @@ public class EmailPasswordActivity extends AppCompatActivity implements
     private EditText mPasswordField;
 
 
-    private static FirebaseAuth mAuth;
+    public static FirebaseAuth mAuth;
     UserPojo up = null;
     FireStoreUtils fireStoreUtils = new FireStoreUtils();
 
@@ -72,17 +65,17 @@ public class EmailPasswordActivity extends AppCompatActivity implements
 
         mAuth = FirebaseAuth.getInstance();
 
-        Button crashButton = new Button(this);
-        crashButton.setText("Crash!");
-        crashButton.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View view) {
-                Crashlytics.getInstance().crash();
-            }
-        });
+//        Button crashButton = new Button(this);
+//        crashButton.setText("Crash!");
+//        crashButton.setOnClickListener(new View.OnClickListener() {
+//            public void onClick(View view) {
+//                Crashlytics.getInstance().crash();
+//            }
+//        });
 
-        addContentView(crashButton, new ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT));
+//        addContentView(crashButton, new ViewGroup.LayoutParams(
+//                ViewGroup.LayoutParams.MATCH_PARENT,
+//                ViewGroup.LayoutParams.WRAP_CONTENT));
     }
 
     @Override
@@ -108,13 +101,16 @@ public class EmailPasswordActivity extends AppCompatActivity implements
                             Log.d(TAG, "createUserWithEmail:success");
                             FirebaseUser user = mAuth.getCurrentUser();
                             fireStoreUtils.createUser(user);
-                            updateUI(user);
+                            sendEmailVerification();
+                            Toast.makeText(EmailPasswordActivity.this,"Login mail sent. Activate account.",
+                                    Toast.LENGTH_LONG).show();
+//                            updateUI(user);
                         } else {
                             // If sign in fails, display a message to the user.
                             Log.w(TAG, "createUserWithEmail:failure", task.getException());
                             Toast.makeText(EmailPasswordActivity.this, "Authentication failed.",
                                     Toast.LENGTH_SHORT).show();
-                            updateUI(null);
+//                            updateUI(null);
                         }
 
                     }
@@ -126,7 +122,6 @@ public class EmailPasswordActivity extends AppCompatActivity implements
         if (!validateForm()) {
             return;
         }
-
         mAuth.signInWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
                     @Override
@@ -135,15 +130,29 @@ public class EmailPasswordActivity extends AppCompatActivity implements
                             // Sign in success, update UI with the signed-in user's information
                             Log.d(TAG, "signInWithEmail:success");
                             FirebaseUser user = mAuth.getCurrentUser();
-
+                            if(!user.isEmailVerified()){
+                                mStatusTextView.setText("Verification mail has been sent.");
+                                return;
+                            }
                             //-----------------------------------------
                             //only way how to get an object from onSuccess method in firestoreutils(in case we will need it)
-                            fireStoreUtils.getUser(user,new MyCallback() {
+                            fireStoreUtils.getUser(user,new Callback() {
                                 @Override
                                 public void onCallback(UserPojo userPojo) {
                                     Log.d("TAG", userPojo.getDateOfRegistration());
                                 }
+
+                                @Override
+                                public void onCallback(PostPojo pojo) {
+
+                                }
+
+                                @Override
+                                public void onCallback(List<PostPojo> pojos) {
+
+                                }
                             });
+                            fireStoreUtils.getPosts();
                             //-----------------------------------------
                             updateUI(user);
                         } else {
@@ -221,21 +230,18 @@ public class EmailPasswordActivity extends AppCompatActivity implements
                 startActivityForResult(intent,MAIN_REQUEST);
             }
             //majo doplnil
-            mStatusTextView.setText(getString(R.string.emailpassword_status_fmt,
-                    user.getEmail(), user.isEmailVerified()));
-            mDetailTextView.setText(getString(R.string.firebase_status_fmt, user.getUid()));
 
-            findViewById(R.id.emailPasswordButtons).setVisibility(View.GONE);
-            findViewById(R.id.emailPasswordFields).setVisibility(View.GONE);
-            findViewById(R.id.signedInButtons).setVisibility(View.VISIBLE);
-
-            findViewById(R.id.verifyEmailButton).setEnabled(!user.isEmailVerified());
+//            findViewById(R.id.emailPasswordButtons).setVisibility(View.GONE);
+//            findViewById(R.id.emailPasswordFields).setVisibility(View.GONE);
+//            findViewById(R.id.signedInButtons).setVisibility(View.VISIBLE);
+//
+//            findViewById(R.id.verifyEmailButton).setEnabled(!user.isEmailVerified());
 
 
 
         } else {
-            mStatusTextView.setText(R.string.signed_out);
-            mDetailTextView.setText(null);
+//            mStatusTextView.setText(R.string.signed_out);
+//            mDetailTextView.setText(null);
 
             findViewById(R.id.emailPasswordButtons).setVisibility(View.VISIBLE);
             findViewById(R.id.emailPasswordFields).setVisibility(View.VISIBLE);
