@@ -4,6 +4,8 @@ package org.stuba.fei.socialapp;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
@@ -43,6 +45,7 @@ public class EmailPasswordActivity extends AppCompatActivity implements
     //majo
     private static final int MAIN_REQUEST = 1111;
     private Context context;
+    private Toast toast;
     //majo doplnil
 
     @Override
@@ -91,30 +94,31 @@ public class EmailPasswordActivity extends AppCompatActivity implements
         if (!validateForm()) {
             return;
         }
-
-        mAuth.createUserWithEmailAndPassword(email, password)
-                .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
-                    @Override
-                    public void onComplete(@NonNull Task<AuthResult> task) {
-                        if (task.isSuccessful()) {
-                            // Sign in success, update UI with the signed-in user's information
-                            Log.d(TAG, "createUserWithEmail:success");
-                            FirebaseUser user = mAuth.getCurrentUser();
-                            fireStoreUtils.createUser(user);
-                            sendEmailVerification();
-                            Toast.makeText(EmailPasswordActivity.this,"Login mail sent. Activate account.",
-                                    Toast.LENGTH_LONG).show();
+        if(isNetworkAvailable(this)) {
+            mAuth.createUserWithEmailAndPassword(email, password)
+                    .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
+                        @Override
+                        public void onComplete(@NonNull Task<AuthResult> task) {
+                            if (task.isSuccessful()) {
+                                // Sign in success, update UI with the signed-in user's information
+                                Log.d(TAG, "createUserWithEmail:success");
+                                FirebaseUser user = mAuth.getCurrentUser();
+                                fireStoreUtils.createUser(user);
+                                sendEmailVerification();
+                                Toast.makeText(EmailPasswordActivity.this, "Login mail sent. Activate account.",
+                                        Toast.LENGTH_LONG).show();
 //                            updateUI(user);
-                        } else {
-                            // If sign in fails, display a message to the user.
-                            Log.w(TAG, "createUserWithEmail:failure", task.getException());
-                            Toast.makeText(EmailPasswordActivity.this, "Authentication failed.",
-                                    Toast.LENGTH_SHORT).show();
+                            } else {
+                                // If sign in fails, display a message to the user.
+                                Log.w(TAG, "createUserWithEmail:failure", task.getException());
+                                Toast.makeText(EmailPasswordActivity.this, "Authentication failed.",
+                                        Toast.LENGTH_SHORT).show();
 //                            updateUI(null);
-                        }
+                            }
 
-                    }
-                });
+                        }
+                    });
+        }
     }
 
     private void signIn(String email, String password) {
@@ -122,51 +126,57 @@ public class EmailPasswordActivity extends AppCompatActivity implements
         if (!validateForm()) {
             return;
         }
-        mAuth.signInWithEmailAndPassword(email, password)
-                .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
-                    @Override
-                    public void onComplete(@NonNull Task<AuthResult> task) {
-                        if (task.isSuccessful()) {
-                            // Sign in success, update UI with the signed-in user's information
-                            Log.d(TAG, "signInWithEmail:success");
-                            FirebaseUser user = mAuth.getCurrentUser();
-                            if(!user.isEmailVerified()){
-                                mStatusTextView.setText("Verification mail has been sent.");
-                                return;
+        if(isNetworkAvailable(this)) {
+            mAuth.signInWithEmailAndPassword(email, password)
+                    .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
+                        @Override
+                        public void onComplete(@NonNull Task<AuthResult> task) {
+                            if (task.isSuccessful()) {
+                                // Sign in success, update UI with the signed-in user's information
+                                Log.d(TAG, "signInWithEmail:success");
+                                FirebaseUser user = mAuth.getCurrentUser();
+                                if (!user.isEmailVerified()) {
+                                    mStatusTextView.setText("Verification mail has been sent.");
+                                    return;
+                                }
+                                //-----------------------------------------
+                                //only way how to get an object from onSuccess method in firestoreutils(in case we will need it)
+                                fireStoreUtils.getUser(user, new Callback() {
+                                    @Override
+                                    public void onCallback(UserPojo userPojo) {
+                                        Log.d("TAG", userPojo.getDateOfRegistration());
+                                    }
+
+                                    @Override
+                                    public void onCallback2(List<UserPojo> pojos) {
+
+                                    }
+
+                                    @Override
+                                    public void onCallback(PostPojo pojo) {
+
+                                    }
+
+                                    @Override
+                                    public void onCallback3(List<PostPojo> pojos) {
+
+                                    }
+                                });
+                                //-----------------------------------------
+                                updateUI(user);
+                            } else {
+                                // If sign in fails, display a message to the user.
+                                Log.w(TAG, "signInWithEmail:failure", task.getException());
+                                Toast.makeText(EmailPasswordActivity.this, "Authentication failed.",
+                                        Toast.LENGTH_SHORT).show();
+                                updateUI(null);
                             }
-                            //-----------------------------------------
-                            //only way how to get an object from onSuccess method in firestoreutils(in case we will need it)
-                            fireStoreUtils.getUser(user,new Callback() {
-                                @Override
-                                public void onCallback(UserPojo userPojo) {
-                                    Log.d("TAG", userPojo.getDateOfRegistration());
-                                }
-
-                                @Override
-                                public void onCallback(PostPojo pojo) {
-
-                                }
-
-                                @Override
-                                public void onCallback(List<PostPojo> pojos) {
-
-                                }
-                            });
-                            fireStoreUtils.getPosts();
-                            //-----------------------------------------
-                            updateUI(user);
-                        } else {
-                            // If sign in fails, display a message to the user.
-                            Log.w(TAG, "signInWithEmail:failure", task.getException());
-                            Toast.makeText(EmailPasswordActivity.this, "Authentication failed.",
-                                    Toast.LENGTH_SHORT).show();
-                            updateUI(null);
+                            if (!task.isSuccessful()) {
+                                mStatusTextView.setText(R.string.auth_failed);
+                            }
                         }
-                        if (!task.isSuccessful()) {
-                            mStatusTextView.setText(R.string.auth_failed);
-                        }
-                    }
-                });
+                    });
+        }
     }
 
     private void signOut() {
@@ -225,9 +235,13 @@ public class EmailPasswordActivity extends AppCompatActivity implements
         if (user != null) {
             //majo doplnil
             if(user.isEmailVerified()){
-                Intent intent = new Intent(context, MainActivity.class);
-                intent.putExtra("user_uid",user.getUid());
-                startActivityForResult(intent,MAIN_REQUEST);
+                if (isNetworkAvailable(this)){
+                    Intent intent = new Intent(context, MainActivity.class);
+                    startActivityForResult(intent,MAIN_REQUEST);
+                }
+                else {
+                    finish();
+                }
             }
             //majo doplnil
 
@@ -268,7 +282,22 @@ public class EmailPasswordActivity extends AppCompatActivity implements
     }
     //majo doplnil
 
-    //majo doplnil
+    private boolean isNetworkAvailable(Activity parentActivity) {
+        ConnectivityManager connectivityManager = (ConnectivityManager) parentActivity.getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
+        if(activeNetworkInfo != null && activeNetworkInfo.isConnected()){
+            return activeNetworkInfo != null && activeNetworkInfo.isConnected();
+        }
+        else {
+            if (toast != null) {
+                toast.cancel();
+            }
+            toast = Toast.makeText(this.getApplicationContext(), "No internet connection", Toast.LENGTH_SHORT);
+            toast.show();
+            return activeNetworkInfo != null && activeNetworkInfo.isConnected();
+        }
+    }
+
     @Override
     public void finish(){
         super.finish();

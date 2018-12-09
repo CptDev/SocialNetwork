@@ -1,6 +1,8 @@
 package org.stuba.fei.socialapp;
 
-public class PostPojo {
+import java.io.Serializable;
+
+public class PostPojo implements Serializable {
 
     private String date;
     private String imageurl;

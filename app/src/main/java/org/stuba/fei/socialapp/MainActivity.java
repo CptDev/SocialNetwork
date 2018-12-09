@@ -11,10 +11,13 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Canvas;
 import android.graphics.Point;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Parcelable;
 import android.os.StrictMode;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
@@ -32,12 +35,22 @@ import android.view.ViewTreeObserver;
 import android.view.WindowManager;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
+import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+
 import java.io.File;
+import java.io.Serializable;
+import java.lang.reflect.Array;
+import java.text.DateFormat;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 
@@ -47,9 +60,11 @@ public class MainActivity extends Activity{
     private Toast toast;
     private Activity activity;
     private Context context;
+    private String path;
 
     //recyclerview
-    private List list;
+    private ArrayList<PostPojo> list = null;
+    private ArrayList<PostPojo> list2 = null;
     private ExtraItemsAdapter adapter;
     private RecyclerView items;
     private float firstItemWidth;
@@ -69,16 +84,11 @@ public class MainActivity extends Activity{
     private static final int CAMERA_REQUEST = 1888;
     private static final int USER_INFO_REQUEST = 1777;
     private static final int USER_POSTS_REQUEST = 1666;
-    final int MyVersion = Build.VERSION.SDK_INT;
+    private static final int MyVersion = Build.VERSION.SDK_INT;
     private static final String BUNDLE_LIST_PIXELS = "allPixels1";
 
-    //file storage
-    private File file;
-    private String path;
-    private static final String app_dir = "mobv";
-
     //fab
-    private FloatingActionButton fab, fab1, fab2, fab3, fab4;
+    private FloatingActionButton fab, fab1, fab2, fab3, fab4,fab5;
     private boolean isFABOpen = false;
     private Animation rotate_forward,rotate_backward;
     private boolean disable = false;
@@ -92,8 +102,10 @@ public class MainActivity extends Activity{
     //logoutCall
     private boolean logout = false;
 
-    //firebase param
-    private static String fb_user_uid;
+    //firebase
+    FireStoreUtils fireStoreUtils = new FireStoreUtils();
+    public static FirebaseAuth mAuth;
+    FirebaseUser user;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -101,33 +113,103 @@ public class MainActivity extends Activity{
         setContentView(R.layout.activity_main);
         coordinatorLayout =  (CoordinatorLayout) findViewById(R.id.main);
         context = getApplicationContext();
+        mAuth = FirebaseAuth.getInstance();
+        user = mAuth.getCurrentUser();
 
-        Bundle extras = getIntent().getExtras();
-        if (extras != null) {
-            fb_user_uid = extras.getString("user_uid");
-        }
+        fireStoreUtils.getUser(user,new Callback() {
+            @Override
+            public void onCallback(UserPojo userPojo) {
+                Log.d("TAG", userPojo.getDateOfRegistration());
+            }
 
-        initRecyclerView();
-        initSwipe();
-        initFAB();
+            @Override
+            public void onCallback2(List<UserPojo> pojos) {
+
+            }
+
+            @Override
+            public void onCallback(PostPojo pojo) {
+
+            }
+
+            @Override
+            public void onCallback3(List<PostPojo> pojos) {
+            }
+        });
+
+        fireStoreUtils.getPosts(new Callback() {
+            @Override
+            public void onCallback(UserPojo pojo) {
+            }
+
+            @Override
+            public void onCallback2(List<UserPojo> pojos) {
+
+            }
+
+            @Override
+            public void onCallback(PostPojo pojo) {
+            }
+
+            @Override
+            public void onCallback3(List<PostPojo> pojos) {
+                list = new ArrayList<PostPojo>();
+                if (pojos.size()>0) {
+                    getAllPixelsEnd = -1.f;
+
+
+                    for (PostPojo p:pojos){
+                        list.add(p);
+                    }
+                    final DateFormat f = new SimpleDateFormat("yyyyMMdd_HHmmss");
+                    Collections.sort(list, new Comparator<PostPojo>() {
+                        @Override
+                        public int compare(PostPojo u1, PostPojo u2) {
+                            try {
+                                return (f.parse(u2.getDate()).compareTo(f.parse(u1.getDate())));
+                            } catch (ParseException e) {
+                                throw new IllegalArgumentException(e);
+                            }
+                        }
+                    });
+                }
+                else {
+                    PostPojo p = new PostPojo();
+                    p.setType("image");
+                    p.setImageurl("http://chittagongit.com//images/no-data-icon/no-data-icon-4.jpg");
+                    p.setDate("Database is empty");
+                    p.setUsername(user.getEmail());
+                    list.add(p);
+                }
+                initRecyclerView();
+                initSwipe();
+                initFAB();
+            }
+        });
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        disableAfterReturm=true;
+        disableAfterReturm = true;
         getAllPixelsEnd = -1.f;
         items = (RecyclerView) findViewById(R.id.card_recycler_view);
-        ViewTreeObserver vto = items.getViewTreeObserver();
-        vto.addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
-            @Override
-            public void onGlobalLayout() {
-                items.getViewTreeObserver().removeOnGlobalLayoutListener(this);
-                calculatePositionAndScroll(items);
+        if(items!=null ) {
+            if (adapter!=null){
+            ViewTreeObserver vto = items.getViewTreeObserver();
+            vto.addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+                @Override
+                public void onGlobalLayout() {
+                    items.getViewTreeObserver().removeOnGlobalLayoutListener(this);
+                    calculatePositionAndScroll(items);
+                }
+            });
+            if (adapter!=null)
+            adapter.notifyDataSetChanged();
+            itemTouchHelper.attachToRecyclerView(items);
             }
-        });
-        itemTouchHelper.attachToRecyclerView(items);
-        adapter.notifyDataSetChanged();
+       }
+
     }
 
     @Override
@@ -173,7 +255,7 @@ public class MainActivity extends Activity{
 
         items = (RecyclerView) findViewById(R.id.card_recycler_view);
         items.setHasFixedSize(true);
-        items.setItemViewCacheSize(6);
+        items.setItemViewCacheSize(30);
         items.setDrawingCacheEnabled(true);
         items.setDrawingCacheQuality(View.DRAWING_CACHE_QUALITY_HIGH);
         PreCachingLayoutManager layoutManager = new PreCachingLayoutManager(getApplicationContext(),0,false);
@@ -204,11 +286,8 @@ public class MainActivity extends Activity{
             }
         });
 
-        list = getData();
         adapter = new ExtraItemsAdapter(getApplicationContext(),list,true);
         items.setAdapter(adapter);
-        adapter.notifyDataSetChanged();
-        items.scrollToPosition(items.getAdapter().getItemCount()-1);
         adapter.notifyDataSetChanged();
     }
 
@@ -222,16 +301,25 @@ public class MainActivity extends Activity{
             @Override
             public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
                 int position = viewHolder.getAdapterPosition();
-                Log.d("position", Integer.toString(position));
+                if (isNetworkAvailable(MainActivity.this)) {
+                    if (direction == ItemTouchHelper.UP) {
 
-                if (direction == ItemTouchHelper.UP){
-                    FABMenuClose();
-                    adapter.onViewDetachedFromWindow((ViewHolder) viewHolder);
-                    userPosts(false);
-                } else if(direction == ItemTouchHelper.DOWN) {
-                    adapter.onViewDetachedFromWindow((ViewHolder) viewHolder);
-                    FABMenuClose();
-                    userInfo(false);
+                        itemTouchHelper.attachToRecyclerView(null);
+                        FABMenuClose();
+                        adapter.onViewDetachedFromWindow((ViewHolder) viewHolder);
+                        userPosts((ViewHolder) viewHolder);
+
+                    } else if (direction == ItemTouchHelper.DOWN) {
+
+                        itemTouchHelper.attachToRecyclerView(null);
+                        adapter.onViewDetachedFromWindow((ViewHolder) viewHolder);
+                        FABMenuClose();
+                        userInfo((ViewHolder) viewHolder);
+                    }
+                }
+                else {
+                    itemTouchHelper.attachToRecyclerView(null);
+                    itemTouchHelper.attachToRecyclerView(items);
                 }
             }
 
@@ -245,7 +333,9 @@ public class MainActivity extends Activity{
 
     private void calculatePositionAndScroll(RecyclerView recyclerView) {
         if(getAllPixelsEnd==allPixels && getGetAllPixelsStart==allPixels && !disableAfterReturm){
-            updateRecycler();
+            if(isNetworkAvailable(this)) {
+                updateRecycler();
+            }
         }
         else {
             if(!disableAfterReturm) {
@@ -255,10 +345,11 @@ public class MainActivity extends Activity{
                 disableAfterReturm=false;
             }
             int expectedPosition = Math.round((allPixels + padding - firstItemWidth) / itemWidth);
-            if (expectedPosition == 0) {
+            Log.d("position",Integer.toString(expectedPosition));
+            if (expectedPosition == -2) {
                 expectedPosition = -1;
-            } else if (expectedPosition <= (-1) * recyclerView.getAdapter().getItemCount() - 1) {
-                expectedPosition++;
+            } else if (expectedPosition >= recyclerView.getAdapter().getItemCount() - 1) {
+                expectedPosition--;
             }
             scrollListToPosition(recyclerView, expectedPosition);
         }
@@ -278,6 +369,7 @@ public class MainActivity extends Activity{
         fab2 = (FloatingActionButton) findViewById(R.id.fab2);
         fab3 = (FloatingActionButton) findViewById(R.id.fab3);
         fab4 = (FloatingActionButton) findViewById(R.id.fab4);
+        fab5 = (FloatingActionButton) findViewById(R.id.fab5);
         rotate_forward = AnimationUtils.loadAnimation(getApplicationContext(),R.anim.rotate_forward);
         rotate_backward = AnimationUtils.loadAnimation(getApplicationContext(),R.anim.rotate_backward);
         fab.setOnClickListener(new View.OnClickListener() {
@@ -292,7 +384,9 @@ public class MainActivity extends Activity{
             @Override
             public void onClick(View view) {
                 if(!disable){
-                    cameraInit("image");
+                    if(isNetworkAvailable(MainActivity.this)) {
+                        path = VideoImage.cameraInit(MainActivity.this, "image");
+                    }
                 }
             }
         });
@@ -300,7 +394,9 @@ public class MainActivity extends Activity{
             @Override
             public void onClick(View view) {
                 if(!disable){
-                    cameraInit("video");
+                    if(isNetworkAvailable(MainActivity.this)) {
+                        path = VideoImage.cameraInit(MainActivity.this, "video");
+                    }
                 }
             }
         });
@@ -308,7 +404,9 @@ public class MainActivity extends Activity{
             @Override
             public void onClick(View view) {
                 if(!disable) {
-                    galeryInit();
+                    if(isNetworkAvailable(MainActivity.this)) {
+                        VideoImage.galeryInit(MainActivity.this);
+                    }
                 }
             }
         });
@@ -320,32 +418,39 @@ public class MainActivity extends Activity{
                         public void run() {
                             AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
                             builder.setTitle("");
-                            builder.setMessage("Logout ?");
+                            builder.setMessage("Are you sure you wish to logout?");
                             builder.setCancelable(true);
-                            builder.setPositiveButton("YES", new DialogInterface.OnClickListener() {
+                            builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
                                 @Override
                                 public void onClick(DialogInterface dialog, int which) {
                                     logout=true;
                                     finish();
                                 }
                             });
-                            builder.setNegativeButton("NO", new DialogInterface.OnClickListener() {
+                            builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
                                 @Override
                                 public void onClick(DialogInterface dialog, int which) {
 
                                 }
                             });
-                            builder.setNeutralButton("SWITCH OFF", new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialog, int which) {
-                                    FABMenuClose();
-                                    logout=false;
-                                    finish();
-                                }
-                            });
+
                             builder.show();
                         }
                     });
+                }
+            }
+        });
+        fab5.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if(isNetworkAvailable(MainActivity.this)) {
+                    FABMenuClose();
+                    updateRecycler();
+                    if (toast != null) {
+                        toast.cancel();
+                    }
+                    toast = Toast.makeText(MainActivity.this.getApplicationContext(), "Refreshed", Toast.LENGTH_SHORT);
+                    toast.show();
                 }
             }
         });
@@ -367,10 +472,12 @@ public class MainActivity extends Activity{
             fab2.animate().translationY(0);
             fab3.animate().translationY(0);
             fab4.animate().translationY(0);
+            fab5.animate().translationY(0);
             fab1.setClickable(false);
             fab2.setClickable(false);
             fab3.setClickable(false);
             fab4.setClickable(false);
+            fab5.setClickable(false);
             isFABOpen = false;
         }
     }
@@ -381,230 +488,206 @@ public class MainActivity extends Activity{
             fab1.animate().translationY(-getResources().getDimension(R.dimen.standard_55));
             fab2.animate().translationY(-getResources().getDimension(R.dimen.standard_105));
             fab3.animate().translationY(-getResources().getDimension(R.dimen.standard_155));
-            fab4.animate().translationY(-getResources().getDimension(R.dimen.standard_205));
+            fab4.animate().translationY(-getResources().getDimension(R.dimen.standard_255));
+            fab5.animate().translationY(-getResources().getDimension(R.dimen.standard_205));
             fab1.setClickable(true);
             fab2.setClickable(true);
             fab3.setClickable(true);
             fab4.setClickable(true);
+            fab5.setClickable(true);
             isFABOpen = true;
         }
     }
 
-    private void galeryInit(){
-        StrictMode.VmPolicy.Builder builder = new StrictMode.VmPolicy.Builder();
-        StrictMode.setVmPolicy(builder.build());
-        if (MyVersion >= Build.VERSION_CODES.M) {
-            if (!PermissionsAllow.checkIfAlreadyhavePermissionWrite(this)) {
-                ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.READ_EXTERNAL_STORAGE}, 1);
-                readOrCreateDir();
-            }
-        }
-        Intent mediaChooser = new Intent(Intent.ACTION_GET_CONTENT);
-        String[] mimeTypes = {"video/mp4","image/jpg", "image/jpeg","image/png"};
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-            mediaChooser.setType(mimeTypes.length == 1 ? mimeTypes[0] : "*/*");
-            if (mimeTypes.length > 0) {
-                mediaChooser.putExtra(Intent.EXTRA_MIME_TYPES, mimeTypes);
-            }
-        } else {
-            String mimeTypesStr = "";
-            for (String mimeType : mimeTypes) {
-                mimeTypesStr += mimeType + "|";
-            }
-            mediaChooser.setType(mimeTypesStr.substring(0,mimeTypesStr.length() - 1));
-        }
-        startActivityForResult(mediaChooser, RESULT_LOAD_IMAGE);
-    }
-
-    private void cameraInit(String type){
-        StrictMode.VmPolicy.Builder builder = new StrictMode.VmPolicy.Builder();
-        StrictMode.setVmPolicy(builder.build());
-        String outDate = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-        String out = "";
-        if(type.equalsIgnoreCase("image")){
-            out =  File.separator + app_dir + File.separator+ "image" + File.separator+"image_" + outDate + ".jpeg";
-        }
-        else if (type.equalsIgnoreCase("video")) {
-            out = File.separator + app_dir + File.separator + "video" + File.separator + "video_" + outDate + ".mp4";
-        }
-        if (MyVersion >= Build.VERSION_CODES.M) {
-            if (!PermissionsAllow.checkIfAlreadyhavePermissionWrite(this)) {
-                ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
-                readOrCreateDir();
-            }
-            else{
-                readOrCreateDir();
-            }
-        }
-        if (MyVersion < Build.VERSION_CODES.M) {
-            readOrCreateDir();
-        }
-        file = new File(Environment.getExternalStorageDirectory().getAbsolutePath()+ out);
-        path = file.toString();
-        if(type.equalsIgnoreCase("image")){
-            Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-            cameraIntent.putExtra(MediaStore.EXTRA_OUTPUT, Uri.fromFile(file));
-            startActivityForResult(cameraIntent, CAMERA_REQUEST);
-        }
-        else if (type.equalsIgnoreCase("video")) {
-            Intent cameraIntent = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
-            cameraIntent.putExtra(MediaStore.EXTRA_OUTPUT, Uri.fromFile(file));
-            startActivityForResult(cameraIntent, CAMERA_REQUEST);
-        }
-    }
-
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == CAMERA_REQUEST ) {
-            if(resultCode == Activity.RESULT_OK ){
+        if (requestCode == CAMERA_REQUEST) {
+            if (resultCode == Activity.RESULT_OK) {
                 if (MyVersion >= Build.VERSION_CODES.M) {
                     if (!PermissionsAllow.checkIfAlreadyhavePermissionRead(this)) {
                         ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.READ_EXTERNAL_STORAGE}, 1);
                     }
                 }
-                new ApiPostRequest(path.toString(), MainActivity.this, this.getApplicationContext(),coordinatorLayout, toast, adapter, items, list);
+                new ApiPostRequest(path, MainActivity.this, this.getApplicationContext(), coordinatorLayout, toast, user);
                 FABMenuClose();
-            }
-            else if(user_info_fab_menu){
-                user_info_fab_menu = false;
-                userInfo(true);
-            }
-            else if(user_posts_fab_menu){
-                user_posts_fab_menu = false;
-                userPosts(true);
             }
         }
         if (requestCode == RESULT_LOAD_IMAGE) {
-            if(resultCode == RESULT_OK && null != data){
+            if (resultCode == RESULT_OK && null != data) {
                 if (MyVersion >= Build.VERSION_CODES.M) {
                     if (!PermissionsAllow.checkIfAlreadyhavePermissionRead(this)) {
                         ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.READ_EXTERNAL_STORAGE}, 1);
                     }
                 }
                 String path = ImageFilePath.getPath(MainActivity.this, data.getData());
-                new ApiPostRequest(path.toString(), MainActivity.this, this.getApplicationContext(),coordinatorLayout, toast, adapter, items, list);
+                new ApiPostRequest(path.toString(), MainActivity.this, this.getApplicationContext(), coordinatorLayout, toast, user);
                 FABMenuClose();
             }
-            else if(user_info_fab_menu){
-                user_info_fab_menu = false;
-                userInfo(true);
-            }
-            else if(user_posts_fab_menu){
-                user_posts_fab_menu = false;
-                userPosts(true);
-            }
         }
-        if (requestCode == USER_INFO_REQUEST) {
+        if (requestCode == USER_INFO_REQUEST || requestCode == USER_POSTS_REQUEST) {
             if (resultCode == Activity.RESULT_OK) {
-                String call =data.getStringExtra("call");
-                switch (call){
-                    case "image":
-                        user_info_fab_menu= true;
-                        cameraInit("image");
-                        break;
-                    case "video":
-                        user_info_fab_menu= true;
-                        cameraInit("video");
-                        break;
-                    case "galery":
-                        user_info_fab_menu= true;
-                        galeryInit();
-                        break;
-                    case "logout":
-                        logout=true;
-                        finish();
-                        break;
-                    case "switchoff":
-                        logout=false;
-                        finish();
-                        break;
+                String call = data.getStringExtra("call");
+                if (call.equalsIgnoreCase("logout")) {
+                    logout = true;
+                    finish();
                 }
             }
+
             if (resultCode == Activity.RESULT_CANCELED) {
                 onResume();
             }
         }
-        if (requestCode == USER_POSTS_REQUEST) {
-            if (resultCode == Activity.RESULT_OK) {
-                String call =data.getStringExtra("call");
-                user_posts_id = data.getIntExtra("id", 0);
-                user_posts_all_pixels = data.getFloatExtra("allPixels", 0);
-                switch (call){
-                    case "image":
-                        user_posts_fab_menu= true;
-                        cameraInit("image");
-                        break;
-                    case "video":
-                        user_posts_fab_menu= true;
-                        cameraInit("video");
-                        break;
-                    case "galery":
-                        user_posts_fab_menu= true;
-                        galeryInit();
-                        break;
-                    case "logout":
-                        logout=true;
-                        finish();
-                        break;
-                    case "switchoff":
-                        logout=false;
-                        finish();
-                        break;
 
-                }
-            }
-            if (resultCode == Activity.RESULT_CANCELED) {
-                onResume();
-            }
-        }
     }
 
-    private void readOrCreateDir(){
-        File directory = new File(Environment.getExternalStorageDirectory() + File.separator + app_dir);
-        if (!directory.exists()) {
-            directory.mkdirs();
-        }
-        File directoryImage = new File(Environment.getExternalStorageDirectory() + File.separator + app_dir + File.separator + "image");
-        if (!directoryImage.exists()) {
-            directoryImage.mkdirs();
-        }
-        File directoryVideo = new File(Environment.getExternalStorageDirectory() + File.separator + app_dir + File.separator + "video");
-        if (!directoryVideo.exists()) {
-            directoryVideo.mkdirs();
-        }
-    }
 
     private void updateRecycler(){
-        getAllPixelsEnd = -1.f;
-        if (toast != null) {
-            toast.cancel();
-        }
-        toast = Toast.makeText(this.getApplicationContext(), "Update", Toast.LENGTH_SHORT);
-        toast.show();
+        fireStoreUtils.getPosts(new Callback() {
+            @Override
+            public void onCallback(UserPojo pojo) {
+            }
+
+            @Override
+            public void onCallback2(List<UserPojo> pojos) {
+
+            }
+
+            @Override
+            public void onCallback(PostPojo pojo) {
+            }
+
+            @Override
+            public void onCallback3(List<PostPojo> pojos) {
+                if (pojos.size()>0) {
+                    list.clear();
+                    for (PostPojo p:pojos){
+                        list.add(p);
+                    }
+                    final DateFormat f = new SimpleDateFormat("yyyyMMdd_HHmmss");
+                    Collections.sort(list, new Comparator<PostPojo>() {
+                        @Override
+                        public int compare(PostPojo u1, PostPojo u2) {
+                            try {
+                                return (f.parse(u2.getDate()).compareTo(f.parse(u1.getDate())));
+                            } catch (ParseException e) {
+                                throw new IllegalArgumentException(e);
+                            }
+                        }
+                    });
+                    items.scrollToPosition(0);
+                    allPixels = 0;
+                    getAllPixelsEnd = -1.f;
+                    adapter.notifyDataSetChanged();
+                }
+
+            }
+        });
+
+            if (toast != null) {
+                toast.cancel();
+            }
+            toast = Toast.makeText(this.getApplicationContext(), "Refreshed", Toast.LENGTH_SHORT);
+            toast.show();
+
     }
 
-    private void userInfo(boolean fabMenu){
+    private void userInfo(final ViewHolder holder){
         getAllPixelsEnd = -1.f;
-        itemTouchHelper.attachToRecyclerView(null);
-        Intent intent = new Intent(this.getApplicationContext(), UserInfo.class);
-        intent.putExtra("fab_menu",fabMenu);
-        startActivityForResult(intent,USER_INFO_REQUEST);
-        if(!fabMenu) {
-            overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right);
-        }
+        fireStoreUtils.getUserUID(list.get(holder.getAdapterPosition()).getUserid(), new Callback() {
+            @Override
+            public void onCallback(UserPojo userPojo) {
+                Intent intent = new Intent(MainActivity.this.getApplicationContext(), UserInfo.class);
+                intent.putExtra("user_name",list.get(holder.getAdapterPosition()).getUserid());
+                intent.putExtra("user_uID",userPojo.getuId());
+                intent.putExtra("user_date",userPojo.getDateOfRegistration());
+                intent.putExtra("user_posts",userPojo.getNumberOfPosts());
+                startActivityForResult(intent,USER_INFO_REQUEST);
+                overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right);
+            }
+
+            @Override
+            public void onCallback2(List<UserPojo> pojos) {
+
+            }
+
+            @Override
+            public void onCallback(PostPojo pojo) {
+            }
+
+            @Override
+            public void onCallback3(List<PostPojo> pojos) {
+            }
+        });
+
     }
 
-    private void userPosts(boolean fabMenu){
+    private void userPosts(final ViewHolder holder){
         getAllPixelsEnd = -1.f;
-        itemTouchHelper.attachToRecyclerView(null);
-        Intent intent = new Intent(this.getApplicationContext(), UserPosts.class);
-        intent.putExtra("fab_menu",fabMenu);
-        intent.putExtra("id",user_posts_id);
-        intent.putExtra("allPixels",user_posts_all_pixels);
-        startActivityForResult(intent,USER_POSTS_REQUEST);
-        if(!fabMenu){
-            overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
-        }
+        fireStoreUtils.getPostsForUser(list.get(holder.getAdapterPosition()).getUserid(),new Callback() {
+            @Override
+            public void onCallback(UserPojo pojo) {
+            }
 
+            @Override
+            public void onCallback2(List<UserPojo> pojos) {
+
+            }
+
+            @Override
+            public void onCallback(PostPojo pojo) {
+            }
+
+            @Override
+            public void onCallback3(List<PostPojo> pojos) {
+                list2 = new ArrayList<PostPojo>();
+                if (pojos.size()>0) {
+                    for (PostPojo p:pojos){
+                        list2.add(p);
+                    }
+                    final DateFormat f = new SimpleDateFormat("yyyyMMdd_HHmmss");
+                    Collections.sort(list2, new Comparator<PostPojo>() {
+                        @Override
+                        public int compare(PostPojo u1, PostPojo u2) {
+                            try {
+                                return (f.parse(u2.getDate()).compareTo(f.parse(u1.getDate())));
+                            } catch (ParseException e) {
+                                throw new IllegalArgumentException(e);
+                            }
+                        }
+                    });
+                }
+                else {
+                    PostPojo p = new PostPojo();
+                    p.setType("image");
+                    p.setImageurl("http://chittagongit.com//images/no-data-icon/no-data-icon-4.jpg");
+                    p.setDate("Database is empty");
+                    p.setUsername(user.getEmail());
+                    list2.add(p);
+                }
+                Intent intent = new Intent(MainActivity.this.getApplicationContext(), UserPosts.class);
+                intent.putExtra("user_name",list.get(holder.getAdapterPosition()).getUserid());
+                intent.putExtra("user_posts", list2);
+                startActivityForResult(intent,USER_POSTS_REQUEST);
+                overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
+            }
+        });
+
+    }
+
+    //check internet connection
+    private boolean isNetworkAvailable(Activity parentActivity) {
+        ConnectivityManager connectivityManager = (ConnectivityManager) parentActivity.getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
+        if(activeNetworkInfo != null && activeNetworkInfo.isConnected()){
+            return activeNetworkInfo != null && activeNetworkInfo.isConnected();
+        }
+        else {
+            if (toast != null) {
+                toast.cancel();
+            }
+            toast = Toast.makeText(this.getApplicationContext(), "No internet connection", Toast.LENGTH_SHORT);
+            toast.show();
+            return activeNetworkInfo != null && activeNetworkInfo.isConnected();
+        }
     }
 
     @Override
@@ -617,86 +700,6 @@ public class MainActivity extends Activity{
     protected void onSaveInstanceState(@NonNull Bundle outState) {
         super.onSaveInstanceState(outState);
         outState.putFloat(BUNDLE_LIST_PIXELS, allPixels);
-    }
-
-    public static List<Data> getData() {
-        List<Data> subActivityData = new ArrayList<>();
-        String[] cardTitle = {
-                "Card 1",
-                "Card 2",
-                "Card 3",
-                "Card 4",
-                "Card 5",
-                "Card 6",
-                "Card 7",
-                "Card 8",
-                "Card 9",
-                "Card 10",
-                "Card 11",
-                "Card 12",
-                "Card 13",
-                "Card 14",
-                "Card 15",
-                "Card 16",
-                "Card 17",
-                "Card 18",
-                "Card 19",
-                "Card 20",
-                "Card 21",
-                "Card 22",
-                "Card 23",
-                "Card 24",
-                "Card 25",
-                "Card 26",
-                "Card 27",
-                "Card 28",
-                "Card 29",
-                "Card 30",
-                "Card 31"
-        };
-        String[] android_image_urls = {
-                "http://api.learn2crack.com/android/images/donut.png",
-                "http://api.learn2crack.com/android/images/eclair.png",
-                "http://api.learn2crack.com/android/images/froyo.png",
-                "http://api.learn2crack.com/android/images/ginger.png",
-                "http://api.learn2crack.com/android/images/honey.png",
-                "http://api.learn2crack.com/android/images/icecream.png",
-                "http://api.learn2crack.com/android/images/donut.png",
-                "http://api.learn2crack.com/android/images/eclair.png",
-                "http://api.learn2crack.com/android/images/froyo.png",
-                "http://api.learn2crack.com/android/images/ginger.png",
-                "http://api.learn2crack.com/android/images/honey.png",
-                "http://api.learn2crack.com/android/images/icecream.png",
-                "http://api.learn2crack.com/android/images/donut.png",
-                "http://api.learn2crack.com/android/images/eclair.png",
-                "http://api.learn2crack.com/android/images/froyo.png",
-                "http://api.learn2crack.com/android/images/ginger.png",
-                "http://api.learn2crack.com/android/images/honey.png",
-                "http://api.learn2crack.com/android/images/icecream.png",
-                "http://api.learn2crack.com/android/images/donut.png",
-                "http://clips.vorwaerts-gmbh.de/VfE_html5.mp4",
-                "http://clips.vorwaerts-gmbh.de/VfE_html5.mp4",
-                "http://clips.vorwaerts-gmbh.de/VfE_html5.mp4",
-                "http://clips.vorwaerts-gmbh.de/VfE_html5.mp4",
-                "http://clips.vorwaerts-gmbh.de/VfE_html5.mp4",
-                "http://clips.vorwaerts-gmbh.de/VfE_html5.mp4",
-                "http://clips.vorwaerts-gmbh.de/VfE_html5.mp4",
-                "http://clips.vorwaerts-gmbh.de/VfE_html5.mp4",
-                "http://clips.vorwaerts-gmbh.de/VfE_html5.mp4",
-                "http://clips.vorwaerts-gmbh.de/VfE_html5.mp4",
-                "http://clips.vorwaerts-gmbh.de/VfE_html5.mp4",
-                "http://clips.vorwaerts-gmbh.de/VfE_html5.mp4"
-        };
-
-        for (int i = 0; i < cardTitle.length; i++) {
-            Data current = new Data();
-            current.setData(cardTitle[i]);
-            current.setUrl(android_image_urls[i]);
-            current.setDate(new SimpleDateFormat("yyyyMMdd_HHmmss").format(Calendar.getInstance().getTime()).toString());
-            current.setUser(fb_user_uid);
-            subActivityData.add(current);
-        }
-        return subActivityData;
     }
 
 }

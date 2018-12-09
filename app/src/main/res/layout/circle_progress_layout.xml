@@ -20,8 +20,8 @@
 
         <ProgressBar
             android:id="@+id/circular_progress_bar"
-            android:layout_width="230dp"
-            android:layout_height="230dp"
+            android:layout_width="150dp"
+            android:layout_height="150dp"
             android:layout_marginTop="30dp"
             android:indeterminate="false"
             android:max="48"
@@ -45,7 +45,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="ZastaviĹĄ posielanie"
+            android:text="Stop sending"
             android:textColor="@android:color/black"
             android:textSize="14sp" />
     </LinearLayout>

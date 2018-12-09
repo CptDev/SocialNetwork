@@ -9,6 +9,7 @@ import android.animation.ObjectAnimator;
 import android.app.Activity;
 import android.os.Build;
 import android.support.design.widget.CoordinatorLayout;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -18,6 +19,7 @@ import android.widget.Button;
 import android.widget.PopupWindow;
 import android.widget.ProgressBar;
 import android.content.Context;
+import android.widget.Toast;
 
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -45,7 +47,7 @@ public class RequestSending{
         this.anim.start();
     }
 
-    public void stopButton(final RequestQueue queue) {
+    public void stopButton(final RequestQueue queue, final Context parentContext, final Toast parentToast) {
 
         Button stopSendButton = (Button) this.customView.findViewById(R.id.stop_send);
         stopSendButton.setOnClickListener(new View.OnClickListener() {
@@ -54,6 +56,7 @@ public class RequestSending{
                 queue.cancelAll(new RequestQueue.RequestFilter() {
                     @Override
                     public boolean apply(Request<?> request) {
+                        messageToast(parentContext,parentToast);
                         stop();
                         return true;
                     }
@@ -64,8 +67,18 @@ public class RequestSending{
     }
 
     public void stop() {
-        this.anim.pause();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            this.anim.pause();
+        }
         this.popupWindow.dismiss();
     }
+    private static void messageToast(Context context, Toast toast){
+        if (toast != null) {
+            toast.cancel();
+        }
+        toast = Toast.makeText(context, "Sending stopped", Toast.LENGTH_SHORT);
+        toast.show();
+    }
+
 
 }

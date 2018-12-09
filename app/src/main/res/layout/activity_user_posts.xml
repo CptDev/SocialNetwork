@@ -18,7 +18,17 @@
         android:layout_height="45dp"
         android:layout_gravity="bottom|end"
         android:layout_margin="20dp"
-        app:srcCompat="@drawable/baseline_power_settings_new_24" />
+        app:srcCompat="@drawable/baseline_power_settings_new_24"
+        tools:ignore="VectorDrawableCompat" />
+
+    <android.support.design.widget.FloatingActionButton
+        android:id="@+id/fab5"
+        android:layout_width="45dp"
+        android:layout_height="45dp"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="20dp"
+        app:srcCompat="@drawable/baseline_refresh_24"
+        tools:ignore="VectorDrawableCompat" />
 
     <android.support.design.widget.FloatingActionButton
         android:id="@+id/fab3"
@@ -26,7 +36,8 @@
         android:layout_height="45dp"
         android:layout_gravity="bottom|end"
         android:layout_margin="20dp"
-        app:srcCompat="@drawable/baseline_folder_open_24" />
+        app:srcCompat="@drawable/baseline_folder_open_24"
+        tools:ignore="VectorDrawableCompat" />
 
     <android.support.design.widget.FloatingActionButton
         android:id="@+id/fab2"
@@ -34,7 +45,8 @@
         android:layout_height="45dp"
         android:layout_gravity="bottom|end"
         android:layout_margin="20dp"
-        app:srcCompat="@drawable/baseline_videocam_24" />
+        app:srcCompat="@drawable/baseline_videocam_24"
+        tools:ignore="VectorDrawableCompat" />
 
     <android.support.design.widget.FloatingActionButton
         android:id="@+id/fab1"
@@ -42,7 +54,8 @@
         android:layout_height="45dp"
         android:layout_gravity="bottom|end"
         android:layout_margin="20dp"
-        app:srcCompat="@drawable/baseline_photo_camera_24" />
+        app:srcCompat="@drawable/baseline_photo_camera_24"
+        tools:ignore="VectorDrawableCompat" />
 
     <android.support.design.widget.FloatingActionButton
         android:id="@+id/fab"

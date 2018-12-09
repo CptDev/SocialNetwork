@@ -19,11 +19,13 @@ public class ViewHolder extends RecyclerView.ViewHolder {
     ImageView img_android;
     PlayerView playerView;
     SimpleExoPlayer player = null;
+    ImageView imgButton;
 
     public ViewHolder(View itemView) {
         super(itemView);
         user = (TextView) itemView.findViewById(R.id.textView3);
         date = (TextView) itemView.findViewById(R.id.item_text);
+        imgButton = (ImageView) itemView.findViewById(R.id.imageButton2);
         img_android = (ImageView) itemView.findViewById(R.id.img_android);
         playerView = itemView.findViewById(R.id.playerView);
     }

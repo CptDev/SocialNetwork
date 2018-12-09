@@ -14,6 +14,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FirebaseFirestoreSettings;
 import com.google.firebase.firestore.QuerySnapshot;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -41,16 +42,15 @@ public class FireStoreUtils {
         colRef.add(pp);
     }
 
-    public void getPosts() {
+    public void getPosts(final Callback myCallback) {
         db.collection("posts").get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
             @Override
             public void onComplete(@NonNull Task<QuerySnapshot> task) {
                 if (task.isSuccessful()) {
                     List<PostPojo> list = new ArrayList<>();
                     list = task.getResult().toObjects(PostPojo.class);
-//                        list.adddocument);
-                        System.out.print("hey");
-//                    }
+                    myCallback.onCallback3(list);
+                        System.out.print(list);
                 } else {
                     Log.d(TAG, "Error getting documents: ", task.getException());
                 }
@@ -58,15 +58,42 @@ public class FireStoreUtils {
         });
     }
 
-    public void getPostsForUser(FirebaseUser user) {
-        db.collection("posts").whereEqualTo("userid", user.getUid()).get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+    public void getPostsForUser(String uid, final Callback myCallback) {
+        db.collection("posts").whereEqualTo("userid", uid).get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
             @Override
             public void onComplete(@NonNull Task<QuerySnapshot> task) {
                 if (task.isSuccessful()) {
-                    List<PostPojo> list = new ArrayList<>();
-                    list = task.getResult().toObjects(PostPojo.class);
+                    ArrayList<PostPojo> list = new ArrayList<>();
+                    list = (ArrayList<PostPojo>) task.getResult().toObjects(PostPojo.class);
+                    myCallback.onCallback3(list);
                 } else {
                     Log.d(TAG, "Error getting documents: ", task.getException());
+                }
+            }
+        });
+    }
+
+    public void getUserUID(String uid, final Callback myCallback) {
+       /* db.collection("users").document(uid).addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+            @Override
+            public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                if (task.isSuccessful()) {
+                    List<UserPojo> list = new ArrayList<>();
+                    list = task.getResult().toObjects(UserPojo.class);
+                    myCallback.onCallback2(list);
+                } else {
+                    Log.d(TAG, "Error getting documents: ", task.getException());
+                }
+            }
+        });*/
+        DocumentReference docRef = db.collection("users").document(uid);
+
+        docRef.get().addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+            @Override
+            public void onSuccess(DocumentSnapshot documentSnapshot) {
+                if (documentSnapshot.exists()) {
+                    UserPojo up = documentSnapshot.toObject(UserPojo.class);
+                    myCallback.onCallback(up);
                 }
             }
         });

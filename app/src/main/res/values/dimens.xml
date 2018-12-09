@@ -14,5 +14,6 @@
     <dimen name="standard_105">120dp</dimen>
     <dimen name="standard_155">175dp</dimen>
     <dimen name="standard_205">230dp</dimen>
+    <dimen name="standard_255">285dp</dimen>
 
 </resources>

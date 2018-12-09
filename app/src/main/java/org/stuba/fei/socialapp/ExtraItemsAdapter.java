@@ -33,9 +33,9 @@ public class ExtraItemsAdapter extends RecyclerView.Adapter<ViewHolder> {
     private static final int VIEW_TYPE_ITEM = 2;
     private boolean main_recycler;
     private Context context;
-    List<Data> title = Collections.EMPTY_LIST;
+    List<PostPojo> title;
 
-    public ExtraItemsAdapter(Context context, List<Data> title, boolean main_recycler) {
+    public ExtraItemsAdapter(Context context, List<PostPojo> title, boolean main_recycler) {
         this.title=title;
         this.context=context;
         this.main_recycler=main_recycler;
@@ -49,7 +49,7 @@ public class ExtraItemsAdapter extends RecyclerView.Adapter<ViewHolder> {
     @Override
     public int getItemViewType(int position) {
         if (main_recycler){
-            if (position  == -1 || position == getItemCount()*(-1)) {
+            if (position  == -1 || position == getItemCount()) {
                 return VIEW_TYPE_PADDING;
             }
             return VIEW_TYPE_ITEM;
@@ -76,111 +76,81 @@ public class ExtraItemsAdapter extends RecyclerView.Adapter<ViewHolder> {
 
     @Override
     public void onBindViewHolder(ViewHolder holder, final int position) {
-
         if (getItemViewType(position) == VIEW_TYPE_ITEM) {
-            Data currentCard = title.get(position);
-            holder.user.setText(currentCard.getUser());
+            PostPojo currentCard = title.get(position);
+            holder.user.setText(currentCard.getUsername());
             holder.date.setText(currentCard.getDate());
-            String url = Uri.parse(currentCard.getUrl())
-                    .buildUpon()
-                    .build()
-                    .toString();
 
-            if (currentCard.url.contains(".mp4"))
+
+            if (currentCard.getType().equalsIgnoreCase("video"))
             {
                 holder.playerView.setPlayer(null);
 
-                holder.playerView.setVisibility(View.GONE);
-                holder.img_android.setVisibility(View.VISIBLE);
-
-                Glide.with(context)
-                        .load(url)
-                        .diskCacheStrategy(DiskCacheStrategy.ALL)
-                        .centerCrop()
-                        .crossFade()
-                        //.placeholder(R.drawable.ic_launcher_background)
-                        .error(R.drawable.ic_launcher_background)
-                        .thumbnail(Glide.with(context).load(url))
-                        .into(holder.img_android);
-
                 holder.player = ExoPlayerFactory.newSimpleInstance(context, new DefaultTrackSelector());
                 holder.playerView.setPlayer(holder.player);
 
                 DefaultDataSourceFactory dataSourceFactory = new DefaultDataSourceFactory(context, Util.getUserAgent(context, "app"));
 
                 ExtractorMediaSource mediaSource = new ExtractorMediaSource.Factory(dataSourceFactory)
-                            .createMediaSource(Uri.parse(currentCard.getUrl()));
+                            .createMediaSource(Uri.parse(currentCard.getVideourl()));
 
                 holder.player.prepare(mediaSource);
                 holder.player.setVideoScalingMode(C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING);
                 holder.player.setPlayWhenReady(false);
-
+                holder.imgButton.setVisibility(View.VISIBLE);
                 holder.playerView.setVisibility(View.VISIBLE);
                 holder.img_android.setVisibility(View.GONE);
 
             }
-            else {
+            else if(currentCard.getType().equalsIgnoreCase("image")){
+                holder.imgButton.setVisibility(View.INVISIBLE);
+                String url = Uri.parse(currentCard.getImageurl())
+                        .buildUpon()
+                        .build()
+                        .toString();
                 holder.playerView.setVisibility(View.GONE);
                 holder.img_android.setVisibility(View.VISIBLE);
                 Glide.with(context)
                         .load(url)
-                        .diskCacheStrategy(DiskCacheStrategy.ALL)
+                        //.diskCacheStrategy(DiskCacheStrategy.ALL)
                         .centerCrop()
                         .crossFade()
-                        //.placeholder(R.drawable.ic_launcher_background)
                         .error(R.drawable.ic_launcher_background)
                         .into(holder.img_android);
             }
         }
+
     }
 
     @Override
-    public void onViewAttachedToWindow(ViewHolder holder)
-    {
-        if (holder.player == null && getItemViewType(holder.getAdapterPosition()) == VIEW_TYPE_ITEM) {
+    public void onViewAttachedToWindow(ViewHolder holder) {
+            if (holder.player == null && getItemViewType(holder.getAdapterPosition()) == VIEW_TYPE_ITEM) {
 
-            Data currentCard = title.get(holder.getAdapterPosition());
-            String url = Uri.parse(currentCard.getUrl())
-                    .buildUpon()
-                    .build()
-                    .toString();
+                PostPojo currentCard = title.get(holder.getAdapterPosition());
 
-            if (currentCard.url.contains(".mp4"))
-            {
-                holder.user.setText(currentCard.getUser());
-                holder.date.setText(currentCard.getDate());
+                if (currentCard.getType().equalsIgnoreCase("video")) {
 
-                holder.playerView.setVisibility(View.GONE);
-                holder.img_android.setVisibility(View.VISIBLE);
+                    holder.user.setText(currentCard.getUsername());
+                    holder.date.setText(currentCard.getDate());
 
-                Glide.with(context)
-                        .load(url)
-                        .diskCacheStrategy(DiskCacheStrategy.ALL)
-                        .centerCrop()
-                        .crossFade()
-                        //.placeholder(R.drawable.ic_launcher_background)
-                        .error(R.drawable.ic_launcher_background)
-                        .thumbnail(Glide.with(context).load(url))
-                        .into(holder.img_android);
+                    holder.player = ExoPlayerFactory.newSimpleInstance(context, new DefaultTrackSelector());
 
-                holder.player = ExoPlayerFactory.newSimpleInstance(context, new DefaultTrackSelector());
+                    holder.playerView.setPlayer(holder.player);
 
-                holder.playerView.setPlayer(holder.player);
+                    DefaultDataSourceFactory dataSourceFactory = new DefaultDataSourceFactory(context, Util.getUserAgent(context, "app"));
 
-                DefaultDataSourceFactory dataSourceFactory = new DefaultDataSourceFactory(context, Util.getUserAgent(context, "app"));
+                    ExtractorMediaSource mediaSource = new ExtractorMediaSource.Factory(dataSourceFactory)
+                            .createMediaSource(Uri.parse(currentCard.getVideourl()));
 
-                ExtractorMediaSource mediaSource = new ExtractorMediaSource.Factory(dataSourceFactory)
-                            .createMediaSource(Uri.parse(currentCard.getUrl()));
+                    holder.player.prepare(mediaSource);
+                    holder.player.setVideoScalingMode(C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING);
+                    holder.player.setPlayWhenReady(false);
 
-                holder.player.prepare(mediaSource);
-                holder.player.setVideoScalingMode(C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING);
-                holder.player.setPlayWhenReady(false);
-
-                holder.playerView.setVisibility(View.VISIBLE);
-                holder.img_android.setVisibility(View.GONE);
-
+                    holder.imgButton.setVisibility(View.VISIBLE);
+                    holder.playerView.setVisibility(View.VISIBLE);
+                    holder.img_android.setVisibility(View.GONE);
+                }
             }
-        }
     }
 
     @Override
