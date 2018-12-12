@@ -10,7 +10,8 @@
     <string name="hint_user_id">User ID</string>
     <string name="get_custom_token">Get Token</string>
     <string name="sign_in">Sign In</string>
-    <string name="create_account">Create Account</string>
+    <string name="create_account">Sign up</string>
+    <string name="resend_mail">Resend mail</string>
     <string name="send_link">Send Link</string>
     <string name="sign_out">Sign Out</string>
     <string name="verify_email">Verify Email</string>

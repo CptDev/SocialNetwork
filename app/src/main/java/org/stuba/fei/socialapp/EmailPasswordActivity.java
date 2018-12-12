@@ -63,8 +63,7 @@ public class EmailPasswordActivity extends AppCompatActivity implements
         // Buttons
         findViewById(R.id.emailSignInButton).setOnClickListener(this);
         findViewById(R.id.emailCreateAccountButton).setOnClickListener(this);
-        findViewById(R.id.signOutButton).setOnClickListener(this);
-        findViewById(R.id.verifyEmailButton).setOnClickListener(this);
+        findViewById(R.id.sendMailBtn).setOnClickListener(this);
 
         mAuth = FirebaseAuth.getInstance();
 
@@ -94,6 +93,7 @@ public class EmailPasswordActivity extends AppCompatActivity implements
         if (!validateForm()) {
             return;
         }
+
         if(isNetworkAvailable(this)) {
             mAuth.createUserWithEmailAndPassword(email, password)
                     .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
@@ -105,14 +105,19 @@ public class EmailPasswordActivity extends AppCompatActivity implements
                                 FirebaseUser user = mAuth.getCurrentUser();
                                 fireStoreUtils.createUser(user);
                                 sendEmailVerification();
-                                Toast.makeText(EmailPasswordActivity.this, "Login mail sent. Activate account.",
-                                        Toast.LENGTH_LONG).show();
+                                findViewById(R.id.sendMailBtn).setVisibility(View.VISIBLE);
 //                            updateUI(user);
                             } else {
                                 // If sign in fails, display a message to the user.
                                 Log.w(TAG, "createUserWithEmail:failure", task.getException());
-                                Toast.makeText(EmailPasswordActivity.this, "Authentication failed.",
-                                        Toast.LENGTH_SHORT).show();
+                                if(task.getException().getMessage().contains("email address is already in use")){
+                                    Toast.makeText(EmailPasswordActivity.this, "E-mail already in use..",
+                                            Toast.LENGTH_SHORT).show();
+                                } else {
+                                    Toast.makeText(EmailPasswordActivity.this, "Authentication failed.",
+                                            Toast.LENGTH_SHORT).show();
+                                }
+
 //                            updateUI(null);
                             }
 
@@ -136,39 +141,24 @@ public class EmailPasswordActivity extends AppCompatActivity implements
                                 Log.d(TAG, "signInWithEmail:success");
                                 FirebaseUser user = mAuth.getCurrentUser();
                                 if (!user.isEmailVerified()) {
-                                    mStatusTextView.setText("Verification mail has been sent.");
+//                                    mStatusTextView.setText("Please verify your e-mail before signing in.");
+                                    Toast.makeText(EmailPasswordActivity.this, "Please verify your e-mail before signing in.",
+                                            Toast.LENGTH_LONG).show();
                                     return;
                                 }
-                                //-----------------------------------------
-                                //only way how to get an object from onSuccess method in firestoreutils(in case we will need it)
-                                fireStoreUtils.getUser(user, new Callback() {
-                                    @Override
-                                    public void onCallback(UserPojo userPojo) {
-                                        Log.d("TAG", userPojo.getDateOfRegistration());
-                                    }
-
-                                    @Override
-                                    public void onCallback2(List<UserPojo> pojos) {
-
-                                    }
-
-                                    @Override
-                                    public void onCallback(PostPojo pojo) {
-
-                                    }
-
-                                    @Override
-                                    public void onCallback3(List<PostPojo> pojos) {
-
-                                    }
-                                });
-                                //-----------------------------------------
+                                findViewById(R.id.sendMailBtn).setVisibility(View.GONE);
                                 updateUI(user);
                             } else {
                                 // If sign in fails, display a message to the user.
                                 Log.w(TAG, "signInWithEmail:failure", task.getException());
-                                Toast.makeText(EmailPasswordActivity.this, "Authentication failed.",
-                                        Toast.LENGTH_SHORT).show();
+                                if(task.getException().getMessage().contains("no user record")){
+                                    Toast.makeText(EmailPasswordActivity.this, "User does not exist.",
+                                            Toast.LENGTH_SHORT).show();
+                                } else {
+                                    Toast.makeText(EmailPasswordActivity.this, "Authentication failed.",
+                                            Toast.LENGTH_SHORT).show();
+                                }
+
                                 updateUI(null);
                             }
                             if (!task.isSuccessful()) {
@@ -185,20 +175,17 @@ public class EmailPasswordActivity extends AppCompatActivity implements
     }
 
     private void sendEmailVerification() {
-        // Disable button
-        findViewById(R.id.verifyEmailButton).setEnabled(false);
 
         final FirebaseUser user = mAuth.getCurrentUser();
         user.sendEmailVerification()
                 .addOnCompleteListener(this, new OnCompleteListener<Void>() {
                     @Override
                     public void onComplete(@NonNull Task<Void> task) {
-                        findViewById(R.id.verifyEmailButton).setEnabled(true);
 
                         if (task.isSuccessful()) {
                             Toast.makeText(EmailPasswordActivity.this,
-                                    "Verification email sent to " + user.getEmail(),
-                                    Toast.LENGTH_SHORT).show();
+                                    "Verification email sent to " + user.getEmail() + ". Please verify your account.",
+                                    Toast.LENGTH_LONG).show();
                         } else {
                             Log.e(TAG, "sendEmailVerification", task.getException());
                             Toast.makeText(EmailPasswordActivity.this,
@@ -259,7 +246,6 @@ public class EmailPasswordActivity extends AppCompatActivity implements
 
             findViewById(R.id.emailPasswordButtons).setVisibility(View.VISIBLE);
             findViewById(R.id.emailPasswordFields).setVisibility(View.VISIBLE);
-            findViewById(R.id.signedInButtons).setVisibility(View.GONE);
         }
     }
 
@@ -311,9 +297,7 @@ public class EmailPasswordActivity extends AppCompatActivity implements
             createAccount(mEmailField.getText().toString(), mPasswordField.getText().toString());
         } else if (i == R.id.emailSignInButton) {
             signIn(mEmailField.getText().toString(), mPasswordField.getText().toString());
-        } else if (i == R.id.signOutButton) {
-            signOut();
-        } else if (i == R.id.verifyEmailButton) {
+        } else if(i == R.id.sendMailBtn) {
             sendEmailVerification();
         }
     }
