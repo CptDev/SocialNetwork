@@ -19,6 +19,7 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.DisplayMetrics;
 
+import android.util.Log;
 import android.view.Display;
 import android.view.View;
 import android.view.ViewTreeObserver;
@@ -75,6 +76,9 @@ public class UserPosts extends AppCompatActivity {
     private static FirebaseAuth mAuth;
     private FirebaseUser user;
     private static String userName;
+    private boolean isUser = false;
+    private boolean post = false;
+    private int listSize = 0;
 
     //static variables
     private static final String BUNDLE_LIST_PIXELS = "allPixels";
@@ -97,6 +101,10 @@ public class UserPosts extends AppCompatActivity {
             userName = extras.getString("user_name");
             list = new ArrayList<PostPojo>();
             list = (ArrayList<PostPojo>) getIntent().getSerializableExtra("user_posts");
+        }
+
+        if((user.getUid()).equals(list.get(0).getUserid())){
+            isUser=true;
         }
 
         getAllPixelsEnd = -1.f;
@@ -159,7 +167,6 @@ public class UserPosts extends AppCompatActivity {
             public void onCallback3(List<PostPojo> pojos) {
                 list.clear();
                 if (pojos.size() > 0) {
-
                     for (PostPojo p : pojos) {
                         list.add(p);
                     }
@@ -224,10 +231,30 @@ public class UserPosts extends AppCompatActivity {
                     if (newState == RecyclerView.SCROLL_STATE_IDLE) {
                         disable = false;
                         calculatePositionAndScroll(recyclerView);
+                        if(post){
+                            if(listSize!=list.size()){
+                                allPixels = 0;
+                                getAllPixelsEnd = -1.f;
+                                post= false;
+                            }
+                            else{
+                                post = false;
+                            }
+                        }
                     }
                     else {
                         FABMenuClose();
                         disable = true;
+                        if(post){
+                            if(listSize!=list.size()){
+                                allPixels = 0;
+                                getAllPixelsEnd = -1.f;
+                                post= false;
+                            }
+                            else{
+                                post = false;
+                            }
+                        }
                     }
                 }
             }
@@ -246,7 +273,7 @@ public class UserPosts extends AppCompatActivity {
 
     private void calculatePositionAndScroll(RecyclerView recyclerView) {
         //swipe in top of recycler
-        if(getAllPixelsEnd==allPixels && getGetAllPixelsStart==allPixels){
+        if(getAllPixelsEnd==allPixels && getGetAllPixelsStart==allPixels && post==false){
             finish();
         }
         else {
@@ -418,7 +445,14 @@ public class UserPosts extends AppCompatActivity {
                         ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.READ_EXTERNAL_STORAGE}, 1);
                     }
                 }
-                new ApiPostRequest(path, UserPosts.this, this.getApplicationContext(), coordinatorLayout, toast, user);
+                if(isUser){
+                    listSize = list.size();
+                    new ApiPostRequest(path, UserPosts.this, this.getApplicationContext(), coordinatorLayout, toast, user, allPixels, getAllPixelsEnd, items, adapter, list);
+                    post = true;
+                }
+                else{
+                    new ApiPostRequest(path, UserPosts.this, this.getApplicationContext(), coordinatorLayout, toast, user);
+                }
                 FABMenuClose();
             }
         }
@@ -430,7 +464,15 @@ public class UserPosts extends AppCompatActivity {
                     }
                 }
                 String path = ImageFilePath.getPath(UserPosts.this, data.getData());
-                new ApiPostRequest(path.toString(), UserPosts.this, this.getApplicationContext(), coordinatorLayout, toast, user);
+                if(isUser) {
+                    listSize = list.size();
+                    new ApiPostRequest(path.toString(), UserPosts.this, this.getApplicationContext(), coordinatorLayout, toast, user, allPixels, getAllPixelsEnd, items, adapter, list);
+                    post = true;
+
+                }
+                else{
+                    new ApiPostRequest(path.toString(), UserPosts.this, this.getApplicationContext(), coordinatorLayout, toast, user);
+                }
                 FABMenuClose();
             }
         }

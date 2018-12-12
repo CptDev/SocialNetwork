@@ -14,6 +14,7 @@ import android.util.Log;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.webkit.MimeTypeMap;
+import android.widget.Adapter;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -30,6 +31,7 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
@@ -202,6 +204,94 @@ public class ApiPostRequest {
             errorToast(parentContext, parentToast, "Incorret file type");
         }
     }
+
+    public ApiPostRequest(final String photo, final Activity parentActivity, final Context parentContext, final CoordinatorLayout parentLayout, final Toast parentToast, final FirebaseUser user, final float a, final float b, final RecyclerView items, final ExtraItemsAdapter adapter, final ArrayList<PostPojo> list ) {
+        //check internet connection
+        if (fileType(parentContext, photo)) {
+            if (fileSize(photo)) {
+                if (isNetworkAvailable(parentActivity)) {
+                    final RequestQueue queue = Volley.newRequestQueue(parentActivity);
+                    final RequestSending rs = new RequestSending(parentContext, parentActivity, parentLayout);
+                    SimpleMultiPartRequest smr = new SimpleMultiPartRequest(Request.Method.POST, POSTURL,
+                            new Response.Listener<String>() {
+                                @Override
+                                public void onResponse(String response) {
+                                    String message = parseResponse(parentContext, parentToast, response);
+                                    if(!message.equalsIgnoreCase("")) {
+                                        try {
+                                            final PostPojo current = new PostPojo();
+                                            current.setUsername(user.getEmail());
+                                            current.setUserid(user.getUid());
+                                            current.setDate(new SimpleDateFormat("yyyyMMdd_HHmmss").format(Calendar.getInstance().getTime()).toString());
+                                            if (fileTypeVideo(parentContext, photo)) {
+                                                current.setVideourl("http://mobv.mcomputing.eu/upload/v/" + message);
+                                                current.setType("video");
+                                            } else {
+                                                current.setImageurl("http://mobv.mcomputing.eu/upload/v/" + message);
+                                                current.setType("image");
+                                            }
+                                            fireStoreUtils.addPost(current);
+                                            fireStoreUtils.getUser(user, new Callback() {
+                                                @Override
+                                                public void onCallback(UserPojo userPojo) {
+                                                    fireStoreUtils.updatePocetPrispevkov(user.getUid(), Integer.parseInt(userPojo.getNumberOfPosts()) + 1);
+                                                    list.add(0,current);
+                                                    adapter.notifyDataSetChanged();
+                                                    items.scrollToPosition(1);
+                                                    items.scrollToPosition(0);
+                                                    adapter.notifyDataSetChanged();
+                                                    succesToast(parentContext, parentToast);
+                                                }
+
+                                                @Override
+                                                public void onCallback2(List<UserPojo> pojos) {
+
+                                                }
+
+                                                @Override
+                                                public void onCallback(PostPojo pojo) {
+
+                                                }
+
+                                                @Override
+                                                public void onCallback3(List<PostPojo> pojos) {
+                                                }
+                                            });
+                                        } catch (Exception error) {
+                                            errorToast(parentContext, parentToast, error.toString());
+                                        }
+                                    }
+
+                                    rs.stop();
+
+                                }
+                            }, new Response.ErrorListener() {
+                        @Override
+                        public void onErrorResponse(VolleyError error) {
+                            rs.stop();
+                            errorToast(parentContext, parentToast, error.toString());
+                        }
+                    });
+                    smr.addFile("upfile", photo);
+                    queue.add(smr);
+                    rs.stopButton(queue, parentContext, parentToast);
+                }
+                //no internet connection
+                else {
+                    errorToast(parentContext, parentToast, "No internet connection");
+                }
+            }
+            //incorrect file size
+            else {
+                errorToast(parentContext, parentToast, "Incorrect file size");
+            }
+        }
+        //incorrect file type
+        else {
+            errorToast(parentContext, parentToast, "Incorret file type");
+        }
+    }
+
 
     //check internet connection
     private static boolean isNetworkAvailable(Activity parentActivity) {

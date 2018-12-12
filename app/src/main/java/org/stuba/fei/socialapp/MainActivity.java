@@ -93,11 +93,6 @@ public class MainActivity extends Activity{
     private Animation rotate_forward,rotate_backward;
     private boolean disable = false;
 
-    //onresultCallbacks
-    private boolean user_info_fab_menu = false;
-    private boolean user_posts_fab_menu = false;
-    private float user_posts_all_pixels;
-    private int user_posts_id;
 
     //logoutCall
     private boolean logout = false;
@@ -106,6 +101,8 @@ public class MainActivity extends Activity{
     FireStoreUtils fireStoreUtils = new FireStoreUtils();
     public static FirebaseAuth mAuth;
     FirebaseUser user;
+    private boolean post = false;
+    private int listSize = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -179,8 +176,10 @@ public class MainActivity extends Activity{
                     p.setImageurl("http://chittagongit.com//images/no-data-icon/no-data-icon-4.jpg");
                     p.setDate("Database is empty");
                     p.setUsername(user.getEmail());
+                    p.setUserid(user.getUid());
                     list.add(p);
                 }
+
                 initRecyclerView();
                 initSwipe();
                 initFAB();
@@ -271,10 +270,30 @@ public class MainActivity extends Activity{
                     if (newState == RecyclerView.SCROLL_STATE_IDLE) {
                         disable = false;
                         calculatePositionAndScroll(recyclerView);
+                        if(post){
+                            if(listSize!=list.size()){
+                                allPixels = 0;
+                                getAllPixelsEnd = -1.f;
+                                post= false;
+                            }
+                            else{
+                                post = false;
+                            }
+                        }
                     }
                     else {
                         FABMenuClose();
                         disable = true;
+                        if(post){
+                            if(listSize!=list.size()){
+                                allPixels = 0;
+                                getAllPixelsEnd = -1.f;
+                                post= false;
+                            }
+                            else{
+                                post = false;
+                            }
+                        }
                     }
                 }
             }
@@ -301,26 +320,31 @@ public class MainActivity extends Activity{
             @Override
             public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
                 int position = viewHolder.getAdapterPosition();
-                if (isNetworkAvailable(MainActivity.this)) {
                     if (direction == ItemTouchHelper.UP) {
-
                         itemTouchHelper.attachToRecyclerView(null);
-                        FABMenuClose();
                         adapter.onViewDetachedFromWindow((ViewHolder) viewHolder);
-                        userPosts((ViewHolder) viewHolder);
+                        if (isNetworkAvailable(MainActivity.this)) {
+                            FABMenuClose();
+                            userPosts((ViewHolder) viewHolder);
+                        }
+                        else{
+                            adapter.notifyDataSetChanged();
+                            itemTouchHelper.attachToRecyclerView(items);
+                        }
 
                     } else if (direction == ItemTouchHelper.DOWN) {
-
                         itemTouchHelper.attachToRecyclerView(null);
                         adapter.onViewDetachedFromWindow((ViewHolder) viewHolder);
-                        FABMenuClose();
-                        userInfo((ViewHolder) viewHolder);
+                        if (isNetworkAvailable(MainActivity.this)) {
+                            FABMenuClose();
+                            userInfo((ViewHolder) viewHolder);
+                        }
+                        else{
+                            adapter.notifyDataSetChanged();
+                            itemTouchHelper.attachToRecyclerView(items);
+                        }
                     }
-                }
-                else {
-                    itemTouchHelper.attachToRecyclerView(null);
-                    itemTouchHelper.attachToRecyclerView(items);
-                }
+
             }
 
             @Override
@@ -332,7 +356,7 @@ public class MainActivity extends Activity{
     }
 
     private void calculatePositionAndScroll(RecyclerView recyclerView) {
-        if(getAllPixelsEnd==allPixels && getGetAllPixelsStart==allPixels && !disableAfterReturm){
+        if(getAllPixelsEnd==allPixels && getGetAllPixelsStart==allPixels && !disableAfterReturm && post==false){
             if(isNetworkAvailable(this)) {
                 updateRecycler();
             }
@@ -507,7 +531,9 @@ public class MainActivity extends Activity{
                         ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.READ_EXTERNAL_STORAGE}, 1);
                     }
                 }
-                new ApiPostRequest(path, MainActivity.this, this.getApplicationContext(), coordinatorLayout, toast, user);
+                listSize= list.size();
+                post = true;
+                new ApiPostRequest(path, MainActivity.this, this.getApplicationContext(), coordinatorLayout, toast, user, allPixels, getAllPixelsEnd, items, adapter, list);
                 FABMenuClose();
             }
         }
@@ -518,8 +544,10 @@ public class MainActivity extends Activity{
                         ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.READ_EXTERNAL_STORAGE}, 1);
                     }
                 }
+                listSize= list.size();
+                post = true;
                 String path = ImageFilePath.getPath(MainActivity.this, data.getData());
-                new ApiPostRequest(path.toString(), MainActivity.this, this.getApplicationContext(), coordinatorLayout, toast, user);
+                new ApiPostRequest(path.toString(), MainActivity.this, this.getApplicationContext(), coordinatorLayout, toast, user, allPixels, getAllPixelsEnd, items, adapter, list);
                 FABMenuClose();
             }
         }

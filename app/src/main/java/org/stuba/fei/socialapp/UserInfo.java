@@ -136,7 +136,11 @@ public class UserInfo extends AppCompatActivity {
             public void onCallback(UserPojo userPojo) {
                 TextViewName.setText(userPojo.getuId());
                 TextViewPosts.setText(userPojo.getNumberOfPosts());
-                TextViewRegistracion.setText(userPojo.getDateOfRegistration());
+                StringBuilder sb = new StringBuilder(userPojo.getDateOfRegistration());
+                int idx = userPojo.getDateOfRegistration().indexOf("GMT");
+                sb.delete(idx, idx+9);
+                sb.delete(0,4);
+                TextViewRegistracion.setText(sb.toString());
             }
 
             @Override
