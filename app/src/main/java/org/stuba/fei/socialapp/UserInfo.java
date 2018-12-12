@@ -15,6 +15,7 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.Display;
 import android.view.MotionEvent;
 import android.view.View;
@@ -96,7 +97,12 @@ public class UserInfo extends AppCompatActivity {
             userName = extras.getString("user_name");
             TextViewName.setText(extras.getString("user_uID"));
             TextViewPosts.setText(extras.getString("user_posts"));
-            TextViewRegistracion.setText(extras.getString("user_date"));
+
+            StringBuilder sb = new StringBuilder(extras.getString("user_date"));
+            int idx = extras.getString("user_date").indexOf("GMT");
+            sb.delete(idx, idx+9);
+            sb.delete(0,4);
+            TextViewRegistracion.setText(sb.toString());
         }
     }
 
